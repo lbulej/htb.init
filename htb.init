@@ -739,7 +739,7 @@ for dev in $DEVICES; do
 	default ${DEFAULT:-0} ${R2Q:+r2q $R2Q} $DCACHE ||
 		htb_fail_off "failed to set root qdisc on $dev!"
 
-	[ "$1" = "compile" ] && echo
+	[ "$1" = "compile" ] && echo || :
 done # dev
 
 
@@ -834,7 +834,7 @@ for classfile in `htb_class_list`; do
 		prio $PRIO_RULE u32 $u32_s $u32_d classid 1:$CLASS
 	done ### rule
 
-	[ "$1" = "compile" ] && echo
+	[ "$1" = "compile" ] && echo || :
 done ### classfile
 ;;
 
