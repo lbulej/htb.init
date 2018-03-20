@@ -955,12 +955,16 @@ stats)
 	htb_show -s
 	;;
 
-restart)
+status)
+	# Empty for LSB compliance.
+	;;
+
+restart|force-reload)
 	shift
 	$0 stop
 	$0 start "$@"
 	;;
 
 *)
-	echo "Usage: `basename $0` {start|compile|stop|restart|timecheck|list|stats}"
+	echo "Usage: `basename $0` {start|compile|stop|restart|force-reload|timecheck|list|stats}"
 esac

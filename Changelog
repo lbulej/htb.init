@@ -1,13 +1,16 @@
 0.8.6
 -----
 
-  * Simon Séhier, Alexandr Korochinskiy
+  * Sławomir Paszkiewic
     - move -maxdepth before non-option arguments
       to stop "find" from emitting warnings
   * Oleksandr Darchuk
     - fix parsing of PRIO_{*} keywords in class file
   * Vasili Shtyk
     - fix to avoid exiting with exit code 1 on "start"
+  * ankry
+    - add (empty) status and force-reload commands
+      for LSB compliance
 
 0.8.5
 -----
