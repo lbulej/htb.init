@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-#    htb.init v0.8.4
-#    Copyright (C) 2002  Lubomir Bulej <pallas@kadan.cz>
+#    htb.init v0.8.5
+#    Copyright (C) 2002-2004  Lubomir Bulej <pallas@kadan.cz>
 #
 #    chkconfig:   2345 11 89
 #    description: script to set up HTB traffic control
@@ -27,6 +27,12 @@
 #
 # VERSION HISTORY
 # ---------------
+# v0.8.5- Nathan Shafer <nicodemus at users.sourceforge.net>
+#	  - allow symlins to class files
+#	- Seth J. Blank <antifreeze at users.sourceforge.net>
+#	  - replace hardcoded ip/tc location with variables
+#	- Mark Davis <mark.davis at gmx.de>
+#	  - allow setting of PRIO_{MARK,RULE,REALM} in class file
 # v0.8.4- Lubomir Bulej <pallas at kadan.cz>
 #	  - fixed small bug in RULE parser to correctly parse
 #	    rules with identical source and destination fields
@@ -397,12 +403,17 @@
 #
 #############################################################################
 
-export LANG=C
+export LC_ALL=C
+
+### Command locations
+TC=/sbin/tc
+IP=/sbin/ip
+MP=/sbin/modprobe
 
 ### Default filter priorities (must be different)
-PRIO_RULE=${PRIO_RULE:-100}
-PRIO_MARK=${PRIO_MARK:-200}
-PRIO_REALM=${PRIO_REALM:-300}
+PRIO_RULE_DEFAULT=${PRIO_RULE:-100}
+PRIO_MARK_DEFAULT=${PRIO_MARK:-200}
+PRIO_REALM_DEFAULT=${PRIO_REALM:-300}
 
 ### Default HTB_PATH & HTB_CACHE settings
 HTB_PATH=${HTB_PATH:-/etc/sysconfig/htb}
@@ -422,6 +433,7 @@ HTB_PROBE="sch_htb sch_sfq cls_fw cls_u32 cls_route"
 ### Config keywords
 HTB_QDISC="DEFAULT\|DCACHE\|R2Q"
 HTB_CLASS="RATE\|CEIL\|BURST\|CBURST\|PRIO\|LEAF\|MTU"
+HTB_CLASS="$HTB_CLASS\|PRIO_RULE\|PRIO_MARK\|PRIO_REALM"
 HTB_CLASS="$HTB_CLASS\|LIMIT\|QUANTUM\|PERTURB"
 
 
@@ -440,8 +452,8 @@ if [ -z "$HTB_BASIC" ]; then
 
 	### Load & filter file $HTB_PATH/$1
 	htb_filter_file () {
-		sed -n "s/#.*//; s/[^a-zA-Z0-9.,;:=/*-]\+//g; \
-		/^[a-zA-Z0-9]\+=[a-zA-Z0-9.,:;/*-]\+$/ p" $HTB_PATH/$1
+		sed -n "s/#.*//; s/[^a-zA-Z0-9.,;:=/*-_]\+//g; \
+		/^[a-zA-Z0-9]\+=[a-zA-Z0-9.,:;/*-_]\+$/ p" $HTB_PATH/$1
 	} # htb_filter_file
 
 
@@ -456,8 +468,9 @@ if [ -z "$HTB_BASIC" ]; then
 	### List of classes in $HTB_PATH
 	htb_class_list () {
 		for dev in `htb_device_list`; do
-			find $HTB_PATH -type f -name "$dev-*" \
-			-not -name '*~' -maxdepth 1 -printf "%f\n"| sort
+			find $HTB_PATH \( -type f -or -type l \) \
+			-name "$dev-*" -not -name '*~' -maxdepth 1 \
+			-printf "%f\n"| sort
 		done
 	} # htb_class_list
 
@@ -470,8 +483,9 @@ if [ -z "$HTB_BASIC" ]; then
 	### Validate cache against config files
 	htb_valid_cache () {
 		for dev in `htb_device_list`; do
-			[ `find $HTB_PATH -type f -name "$dev*" -maxdepth 1 \
-			  -newer $HTB_CACHE| wc -l` -gt 0 ] && VALID=0
+			[ `find $HTB_PATH \( -type f -or -type l \) \
+			  -name "$dev*" -maxdepth 1 -newer $HTB_CACHE| \
+			  wc -l` -gt 0 ] && VALID=0
 			[ $VALID -ne 1 ] && break
 		done
 	} # htb_valid_cache
@@ -502,8 +516,8 @@ else ### Less feature-hungry versions of above functions
 	} # all_device_list
 
 	htb_filter_file () {
-		sed 's/#.*//; s/[^a-zA-Z0-9.,;:=/*-]\+//g' $HTB_PATH/$1 \
-		| grep '^[a-zA-Z0-9]\+=[a-zA-Z0-9.,;:/*-]\+$'
+		sed 's/#.*//; s/[^a-zA-Z0-9.,;:=/*-_]\+//g' $HTB_PATH/$1 \
+		| grep '^[a-zA-Z0-9]\+=[a-zA-Z0-9.,;:/*-_]\+$'
 	} # htb_filter_file
 
 	htb_clsid_chain () {
@@ -633,6 +647,10 @@ htb_load_class () {
 	MTU=""; LEAF=none; PERTURB=10
 	RATE=""; BURST=""; CEIL=""; CBURST=""
 	PRIO=""; LIMIT=""; QUANTUM=""
+	
+	PRIO_RULE=$PRIO_RULE_DEFAULT
+	PRIO_MARK=$PRIO_MARK_DEFAULT
+	PRIO_REALM=$PRIO_REALM_DEFAULT
 
 	eval `echo "$CFILE"| grep "^\($HTB_CLASS\)="`
 	RNAME=""; CNAME=""
@@ -662,21 +680,25 @@ htb_load_class () {
 #############################################################################
 
 ### Check iproute2 tools
-[ -x /sbin/tc -a -x /sbin/ip ] ||
+[ -x $TC -a -x $IP ] ||
 	htb_failure "iproute2 utilities not installed or executable!"
 
 ### Check $HTB_PATH directory
 [ -d $HTB_PATH -a -r $HTB_PATH -a -x $HTB_PATH ] ||
 	htb_failure "$HTB_PATH does not exist or is not readable!"
 
-### Various tweaks
+### ip/tc wrappers
 if [ "$1" = "compile" ]; then
 	### no module probing
 	HTB_PROBE=""
 
+	ip () {
+		$IP "$@"
+	} # ip
+	
 	### echo-only version of "tc" command
 	tc () {
-		echo "tc $@"
+		echo "$TC $@"
 	} # tc
 
 elif [ -n "$HTB_DEBUG" ]; then
@@ -685,15 +707,25 @@ elif [ -n "$HTB_DEBUG" ]; then
 	### Logging version of "ip" command
 	ip () {
 		echo -e "\n# ip $@" >> $HTB_DEBUG
-		/sbin/ip "$@" 2>&1 | tee -a $HTB_DEBUG
+		$IP "$@" 2>&1 | tee -a $HTB_DEBUG
 	} # ip
 
 	### Logging version of "tc" command
 	tc () {
 		echo -e "\n# tc $@" >> $HTB_DEBUG
-		/sbin/tc "$@" 2>&1 | tee -a $HTB_DEBUG
+		$TC "$@" 2>&1 | tee -a $HTB_DEBUG
 	} # tc
-fi # command logging
+else
+	# default wrappers
+	
+	ip () {
+		$IP "$@"
+	} # ip
+	
+	tc () {
+		$TC "$@"
+	} # tc
+fi # ip/tc wrappers
 
 
 case "$1" in
@@ -706,7 +738,7 @@ start|compile)
 
 ### Probe QoS modules (start only)
 for module in $HTB_PROBE; do
-	modprobe $module || htb_failure "failed to load module $module"
+	$MP $module || htb_failure "failed to load module $module"
 done
 
 ### If we are in compile/nocache/logging mode, don't bother with cache
