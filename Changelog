@@ -4,6 +4,8 @@
   * Alexandr Korochinskiy
     - move -maxdepth options before non-option arguments
       to stop "find" from emitting warnings
+  * Oleksandr Darchuk
+    - fix parsing of PRIO_{*} keywords in class file
 
 0.8.5
 -----

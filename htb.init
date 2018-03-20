@@ -411,7 +411,7 @@ if [ -z "$HTB_BASIC" ]; then
 	### Load & filter file $HTB_PATH/$1
 	htb_filter_file () {
 		sed -n "s/#.*//; s/[^a-zA-Z0-9.,;:=/*-_]\+//g; \
-		/^[a-zA-Z0-9]\+=[a-zA-Z0-9.,:;/*-_]\+$/ p" $HTB_PATH/$1
+		/^[a-zA-Z0-9_]\+=[a-zA-Z0-9.,:;/*-_]\+$/ p" $HTB_PATH/$1
 	} # htb_filter_file
 
 
