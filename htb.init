@@ -180,14 +180,14 @@
 # PRIO=<number>					optional, default 0
 # PRIO=5
 #
-#	Priority of class traffic. The higher the number, the lesser the
+#	Priority of class traffic. The lower the number, the higher the
 #	priority. Also, classes with higher priority are offered excess
 #	bandwidth first.
 #
 # LEAF=none|sfq|pfifo|bfifo			optional, default "none"
 #
-#	Tells the script to attach specified leaf queueing discipline to HTB
-#	class. By default, no leaf qdisc is used.
+#	Tells the script to attach the specified leaf queueing discipline
+#	to HTB class. By default, no leaf qdisc is used.
 #
 #	If you want to ensure (approximately) fair sharing of bandwidth among
 #	several hosts in the same class, you should specify LEAF=sfq to attach
