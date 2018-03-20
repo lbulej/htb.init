@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #    htb.init v0.8.5
-#    Copyright (C) 2002-2004  Lubomir Bulej <pallas@kadan.cz>
+#    Copyright (C) 2002-2018  Lubomir Bulej <pallas@kadan.cz>
 #
 #    chkconfig:   2345 11 89
 #    description: script to set up HTB traffic control
@@ -19,48 +19,6 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-#    To get the latest version, check on Freshmeat for actual location:
-#
-#		http://freshmeat.net/projects/htb.init
-#
-#
-# VERSION HISTORY
-# ---------------
-# v0.8.5- Nathan Shafer <nicodemus at users.sourceforge.net>
-#	  - allow symlins to class files
-#	- Seth J. Blank <antifreeze at users.sourceforge.net>
-#	  - replace hardcoded ip/tc location with variables
-#	- Mark Davis <mark.davis at gmx.de>
-#	  - allow setting of PRIO_{MARK,RULE,REALM} in class file
-# v0.8.4- Lubomir Bulej <pallas at kadan.cz>
-#	  - fixed small bug in RULE parser to correctly parse
-#	    rules with identical source and destination fields
-#	  - removed the experimental INJECT keyword
-#	  - ignore *~ backup files when looking for classes
-#	- Mike Boyer <boyer at administrative.com>
-#	  - fix to allow arguments to be passed to "restart" command
-#	- <face at pos.sk>
-#	  - fix to preserve class priority after timecheck
-# v0.8.3- Lubomir Bulej <pallas at kadan.cz>
-#	  - use LC_COLLATE="C" when sorting class files
-#	- Paulo Sedrez
-#	  - fix time2abs to allow hours with leading zero in TIME rules
-# v0.8.2- Lubomir Bulej <pallas at kadan.cz>
-#	  - thanks to Hasso Tepper for reporting the following problems
-#	  - allow dots in interface names for use with VLAN interfaces
-#	  - fixed a thinko resulting from "cosmetic overdosage" :)
-# v0.8.1- Lubomir Bulej <pallas at kadan.cz>
-#	  - added function alternatives for sed/find with less features. To
-#	    enable them, you need to set HTB_BASIC to nonempty string.
-#	  - added posibility to refer to RATE/CEIL of parent class when
-#	    setting RATE/CEIL for child class. Look for "prate" or "pceil"
-#	    in the documentation.
-#	  - fixed broken "timecheck" invocation
-# v0.8	- Lubomir Bulej <pallas at kadan.cz>
-#	  - simplified and converted CBQ.init 0.7 into HTB.init
-#	  - changed configuration file naming conventions
-#	  - lots of HTB specific changes
 #
 #
 # INTRODUCTION
