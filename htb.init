@@ -260,6 +260,13 @@
 #
 #
 #
+# TOS=<value>
+#
+#	These parameters complement the "u32" filter rules, allowing to
+#	match on the type-of-service field in the IP header.
+#
+#
+#
 # REALM=[srealm,][drealm]
 #
 #	These parameters make up "route" filter rules that classify traffic
@@ -392,7 +399,7 @@ HTB_PROBE="sch_htb sch_sfq cls_fw cls_u32 cls_route"
 HTB_QDISC="DEFAULT\|DCACHE\|R2Q"
 HTB_CLASS="RATE\|CEIL\|BURST\|CBURST\|PRIO\|LEAF\|MTU"
 HTB_CLASS="$HTB_CLASS\|PRIO_RULE\|PRIO_MARK\|PRIO_REALM"
-HTB_CLASS="$HTB_CLASS\|LIMIT\|QUANTUM\|PERTURB"
+HTB_CLASS="$HTB_CLASS\|LIMIT\|QUANTUM\|PERTURB|TOS"
 
 
 #############################################################################
@@ -604,7 +611,7 @@ htb_load_class () {
 	### Set defaults & load class
 	MTU=""; LEAF=none; PERTURB=10
 	RATE=""; BURST=""; CEIL=""; CBURST=""
-	PRIO=""; LIMIT=""; QUANTUM=""
+	PRIO=""; LIMIT=""; QUANTUM=""; TOS=""
 	
 	PRIO_RULE=$PRIO_RULE_DEFAULT
 	PRIO_MARK=$PRIO_MARK_DEFAULT
@@ -821,17 +828,19 @@ for classfile in `htb_class_list`; do
 		SADDR=${SADDR#\*}; DADDR=${DADDR#\*}
 
 		### Compose u32 filter rules
-		u32_s="${SPORT:+match ip sport $SPORT $SMASK}"
-		u32_s="${SADDR:+match ip src $SADDR} $u32_s"
-		u32_d="${DPORT:+match ip dport $DPORT $DMASK}"
-		u32_d="${DADDR:+match ip dst $DADDR} $u32_d"
+		u32_src="${SPORT:+match ip sport $SPORT $SMASK}"
+		u32_src="${SADDR:+match ip src $SADDR} $u32_src"
+		u32_dst="${DPORT:+match ip dport $DPORT $DMASK}"
+		u32_dst="${DADDR:+match ip dst $DADDR} $u32_dst"
+		u32_tos="${TOS:+match ip tos $TOS 0xff}"
 
 		### Uncomment the following if you want to see parsed rules
-		#echo "$rule: $u32_s $u32_d"
+		#echo "$rule: $u32_src $u32_dst $u32_tos"
 
 		### Attach u32 filter to the appropriate class
 		tc filter add dev $DEVICE parent 1:0 protocol ip \
-		prio $PRIO_RULE u32 $u32_s $u32_d classid 1:$CLASS
+		prio $PRIO_RULE u32 $u32_src $u32_dst $u32_tos classid 1:$CLASS
+
 	done ### rule
 
 	[ "$1" = "compile" ] && echo || :
