@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#    htb.init v0.8.3
+#    htb.init v0.8.4
 #    Copyright (C) 2002  Lubomir Bulej <pallas@kadan.cz>
 #
 #    chkconfig:   2345 11 89
@@ -27,22 +27,31 @@
 #
 # VERSION HISTORY
 # ---------------
-# v0.8.3- Lubomir Bulej <pallas@kadan.cz>
+# v0.8.4- Lubomir Bulej <pallas at kadan.cz>
+#	  - fixed small bug in RULE parser to correctly parse
+#	    rules with identical source and destination fields
+#	  - removed the experimental INJECT keyword
+#	  - ignore *~ backup files when looking for classes
+#	- Mike Boyer <boyer at administrative.com>
+#	  - fix to allow arguments to be passed to "restart" command
+#	- <face at pos.sk>
+#	  - fix to preserve class priority after timecheck
+# v0.8.3- Lubomir Bulej <pallas at kadan.cz>
 #	  - use LC_COLLATE="C" when sorting class files
 #	- Paulo Sedrez
 #	  - fix time2abs to allow hours with leading zero in TIME rules
-# v0.8.2- Lubomir Bulej <pallas@kadan.cz>
+# v0.8.2- Lubomir Bulej <pallas at kadan.cz>
 #	  - thanks to Hasso Tepper for reporting the following problems
 #	  - allow dots in interface names for use with VLAN interfaces
 #	  - fixed a thinko resulting from "cosmetic overdosage" :)
-# v0.8.1- Lubomir Bulej <pallas@kadan.cz>
+# v0.8.1- Lubomir Bulej <pallas at kadan.cz>
 #	  - added function alternatives for sed/find with less features. To
 #	    enable them, you need to set HTB_BASIC to nonempty string.
 #	  - added posibility to refer to RATE/CEIL of parent class when
 #	    setting RATE/CEIL for child class. Look for "prate" or "pceil"
 #	    in the documentation.
 #	  - fixed broken "timecheck" invocation
-# v0.8	- Lubomir Bulej <pallas@kadan.cz>
+# v0.8	- Lubomir Bulej <pallas at kadan.cz>
 #	  - simplified and converted CBQ.init 0.7 into HTB.init
 #	  - changed configuration file naming conventions
 #	  - lots of HTB specific changes
@@ -59,7 +68,7 @@
 #
 # The "H" in HTB stands for "hierarchical", so while many people did not use
 # (or know about) the possibility to build hierarchical structures using
-# CBQ.init, it should be the obvious thing to require from HTB.init :-)
+# CBQ.init, it should be obvious thing to expect from HTB.init :-)
 #
 # In HTB.init this is done differently, compared to CBQ.init: the usage of
 # PARENT keyword was dropped and instead, class file naming convetion was
@@ -169,8 +178,9 @@
 # RATE=5Mbit
 #
 #	Bandwidth allocated to the class. Traffic going through the class is
-#	shaped to conform to given rate. You can use Kbit, Mbit or bps, Kbps
-#	and Mbps as suffices.
+#	shaped to conform to specified rate. You can use Kbit, Mbit or bps,
+#	Kbps and Mbps as suffices. If you don't specify any unit, bits/sec
+#	are used. Also note that "bps" means "bytes per second", not bits.
 #
 #	The "prate" or "pceil" values will resolve to RATE or CEIL of parent
 #	class. This feature is meant to help humans to keep configuration
@@ -203,13 +213,6 @@
 #	If CBURST is small (one packet size) it shapes bursts not to
 #	exceed CEIL rate the same way PEAK works for TBF.
 #
-# INJECT=<number>				optional, default not set
-# INJECT=1
-#
-#	This parameter is experimental at the moment and should be treated
-#	as such. See http://luxik.cdi.cz/~devik/qos/htb/#inject for detailed
-#	explanation and usage.
-#
 # PRIO=<number>					optional, default 0
 # PRIO=5
 #
@@ -226,11 +229,10 @@
 #	several hosts in the same class, you should specify LEAF=sfq to attach
 #	SFQ as leaf queueing discipline to the class.
 #
-# MTU=<bytes>  					optional, default "1500"
+# MTU=<bytes>  					optional, default "1600"
 #
-#	Maximum number of bytes that can be sent at once over the physical
-#	medium. It defaults to MTU of Ethernet - for other media types you
-#	might want to change it.
+#	Maximum packet size HTB creates rate maps for. The default should
+#	be sufficient for most cases, it certainly is for Ethernet.
 #
 ### SFQ qdisc parameters
 #
@@ -326,9 +328,9 @@
 #	use multiple MARK fields per config.
 #
 #
-# Note: Rules for different filter types can be combined. Attention must be
-#	paid to the priority of filter rules, which can be set below using
-#	PRIO_{RULE,MARK,REALM} variables.
+# Note:	Rules for different filter types can be combined. Attention must be
+#	paid to the priority of filter rules, which can be set below through
+#	the PRIO_{RULE,MARK,REALM} variables.
 #
 ### Time ranging parameters
 #
@@ -395,7 +397,7 @@
 #
 #############################################################################
 
-PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+export LANG=C
 
 ### Default filter priorities (must be different)
 PRIO_RULE=${PRIO_RULE:-100}
@@ -420,7 +422,7 @@ HTB_PROBE="sch_htb sch_sfq cls_fw cls_u32 cls_route"
 ### Config keywords
 HTB_QDISC="DEFAULT\|DCACHE\|R2Q"
 HTB_CLASS="RATE\|CEIL\|BURST\|CBURST\|PRIO\|LEAF\|MTU"
-HTB_CLASS="$HTB_CLASS\|LIMIT\|QUANTUM\|PERTURB\|INJECT"
+HTB_CLASS="$HTB_CLASS\|LIMIT\|QUANTUM\|PERTURB"
 
 
 #############################################################################
@@ -455,7 +457,7 @@ if [ -z "$HTB_BASIC" ]; then
 	htb_class_list () {
 		for dev in `htb_device_list`; do
 			find $HTB_PATH -type f -name "$dev-*" \
-			-maxdepth 1 -printf "%f\n"| LC_COLLATE="C" sort
+			-not -name '*~' -maxdepth 1 -printf "%f\n"| sort
 		done
 	} # htb_class_list
 
@@ -514,9 +516,9 @@ else ### Less feature-hungry versions of above functions
 		PFX=`echo "$HTB_PATH"| sed 's/\//\\\\\//g'`
 		for dev in `htb_device_list`; do
 			find $HTB_PATH -type f -name "$dev-*" \
-			| grep "^$HTB_PATH/$dev-[^/]\+" \
+			| grep "^$HTB_PATH/$dev-[^/]\+[^~]$" \
 			| sed "s/$PFX\///" \
-			| LC_COLLATE="C" sort
+			| sort
 		done
 	} # htb_class_list
 
@@ -581,9 +583,9 @@ htb_fail_off () {
 
 ### Convert time to absolute value
 htb_time2abs () {
-	_min=${1##*:}; _min=${_min##0}
-	_hrs=${1%%:*}; _hrs=${_hrs##0}
-	echo $[${_hrs}*60 + _min]
+	local min=${1##*:}; min=${min##0}
+	local hrs=${1%%:*}; hrs=${hrs##0}
+	echo $[hrs*60 + min]
 } # htb_time2abs
 
 
@@ -630,7 +632,7 @@ htb_load_class () {
 	### Set defaults & load class
 	MTU=""; LEAF=none; PERTURB=10
 	RATE=""; BURST=""; CEIL=""; CBURST=""
-	PRIO=""; LIMIT=""; QUANTUM=""; INJECT=""
+	PRIO=""; LIMIT=""; QUANTUM=""
 
 	eval `echo "$CFILE"| grep "^\($HTB_CLASS\)="`
 	RNAME=""; CNAME=""
@@ -758,8 +760,7 @@ for classfile in `htb_class_list`; do
 	### Create the class
 	tc class add dev $DEVICE parent 1:$PARENT classid 1:$CLASS \
 	htb rate $RATE ${CEIL:+ceil $CEIL} ${BURST:+burst $BURST} \
-	${PRIO:+prio $PRIO} ${CBURST:+cburst $CBURST} ${MTU:+mtu $MTU} \
-	${INJECT:+inject $INJECT} ||
+	${PRIO:+prio $PRIO} ${CBURST:+cburst $CBURST} ${MTU:+mtu $MTU} ||
 		htb_fail_off "failed to add class $CLASS with parent $PARENT on $DEVICE!"
 
 	### Create leaf qdisc if set
@@ -804,7 +805,7 @@ for classfile in `htb_class_list`; do
 	for rule in `htb_cfile_rules RULE`; do
 		### Split rule into source & destination
 		SRC=${rule%%,*}; DST=${rule##*,}
-		[ "$SRC" = "$DST" ] && SRC=""
+		[ "$SRC" = "$rule" ] && SRC=""
 
 
 		### Split destination into address, port & mask fields
@@ -939,9 +940,9 @@ for classfile in `htb_class_list`; do
 
 
 	### Replace HTB class
-	tc class change dev $DEVICE classid 1:$CLASS htb rate $NEW_RATE \
-	${NEW_CEIL:+ceil $NEW_CEIL} ${NEW_BURST:+burst $NEW_BURST} \
-	${NEW_CBURST:+cburst $NEW_CBURST}
+	tc class change dev $DEVICE classid 1:$CLASS htb \
+	prio $PRIO rate $NEW_RATE ${NEW_CEIL:+ceil $NEW_CEIL} \
+	${NEW_BURST:+burst $NEW_BURST} ${NEW_CBURST:+cburst $NEW_CBURST}
 
 	htb_message "$TIME_NOW: change on $DEVICE:$CLASS ($RATE_NOW/$CEIL_NOW -> $NEW_RATE/$NEW_CEIL)"
 done ### class file
@@ -965,8 +966,9 @@ stats)
 	;;
 
 restart)
+	shift
 	$0 stop
-	$0 start
+	$0 start "$@"
 	;;
 
 *)
