@@ -1,3 +1,10 @@
+0.8.6
+-----
+
+  * Alexandr Korochinskiy
+    - move -maxdepth options before non-option arguments
+      to stop "find" from emitting warnings
+
 0.8.5
 -----
 
