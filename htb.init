@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#    htb.init v0.8.1
+#    htb.init v0.8.2
 #    Copyright (C) 2002  Lubomir Bulej <pallas@kadan.cz>
 #
 #    chkconfig:   2345 11 89
@@ -27,9 +27,13 @@
 #
 # VERSION HISTORY
 # ---------------
+# v0.8.2- Lubomir Bulej <pallas@kadan.cz>
+#	  - thanks to Hasso Tepper for reporting the following problems
+#	  - allow dots in interface names for use with VLAN interfaces
+#	  - fixed a thinko resulting from "cosmetic overdosage" :)
 # v0.8.1- Lubomir Bulej <pallas@kadan.cz>
-#	  - added function alternatives for less featured sed/find. To enable
-#	    the alternatives, you need to set HTB_BASIC to nonempty string.
+#	  - added function alternatives for sed/find with less features. To
+#	    enable them, you need to set HTB_BASIC to nonempty string.
 #	  - added posibility to refer to RATE/CEIL of parent class when
 #	    setting RATE/CEIL for child class. Look for "prate" or "pceil"
 #	    in the documentation.
@@ -398,7 +402,7 @@ PRIO_REALM=${PRIO_REALM:-300}
 HTB_PATH=${HTB_PATH:-/etc/sysconfig/htb}
 HTB_CACHE=${HTB_CACHE:-/var/cache/htb.init}
 
-### Uncomment for less featured grep/sed (useful for busybox)
+### Uncomment for sed/find with less features (useful for busybox)
 #HTB_BASIC="yes"
 
 ### Uncomment to enable logfile for debugging
@@ -423,8 +427,8 @@ if [ -z "$HTB_BASIC" ]; then
 	### List of network devices
 	all_device_list () {
 		ip link show \
-		| sed -n "/^[0-9]/ \
-		{ s/^[0-9]\+:[[:space:]]\+\([a-zA-Z0-9]\+\)[:@].*/\1/; p; }"
+		| sed -n "/^[0-9]/ { s/[[:space:]]//g; \
+		s/^[0-9]\+:\([^@-]\+\)\(@.\+\)\?:<.*/\1/; p; }"
 	} # all_device_list
 
 
@@ -487,8 +491,8 @@ else ### Less feature-hungry versions of above functions
 	all_device_list () {
 		ip link show \
 		| grep "^[0-9]" \
-		| sed 's/@/:/; s/[[:space:]]//g' \
-		| cut -d":" -f2
+		| sed "s/[[:space:]]//g; \
+		s/^[0-9]\+:\([^@-]\+\)\(@.\+\)\?:<.*/\1/"
 	} # all_device_list
 
 	htb_filter_file () {
@@ -722,7 +726,7 @@ fi
 
 ### Setup root qdisc on all configured devices
 DEVICES=`htb_device_list`
-[ -z "$DEVICES" ] && htb_fail "no configured devices found!"
+[ -z "$DEVICES" ] && htb_failure "no configured devices found!"
 
 for dev in $DEVICES; do
 	### Retrieve root qdisc options
