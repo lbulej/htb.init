@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#    htb.init v0.8.5
+#    htb.init v0.8.6
 #    Copyright (C) 2002-2018  Lubomir Bulej <pallas@kadan.cz>
 #
 #    chkconfig:   2345 11 89
