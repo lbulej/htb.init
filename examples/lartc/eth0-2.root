@@ -1,0 +1,3 @@
+# root class containing total bandwidth
+RATE=5Mbit
+BURST=15k

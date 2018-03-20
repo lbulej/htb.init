@@ -1,0 +1,6 @@
+# class for outgoing SMTP traffic
+RATE=3Mbit
+CEIL=5Mbit
+BURST=15k
+LEAF=sfq
+RULE=*:25
