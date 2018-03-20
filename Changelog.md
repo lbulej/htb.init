@@ -11,8 +11,6 @@ VERSION HISTORY
     - fix parsing of PRIO_{*} keywords in class file
   * Vasili Shtyk
     - fix to avoid exiting with exit code 1 on "start"
-  * Ventsislav Genchev
-    - support for matching on the IP TOS field
   * ankry
     - add (empty) status and force-reload commands
       for LSB compliance
