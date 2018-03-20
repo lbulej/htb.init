@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#    htb.init v0.8.2
+#    htb.init v0.8.3
 #    Copyright (C) 2002  Lubomir Bulej <pallas@kadan.cz>
 #
 #    chkconfig:   2345 11 89
@@ -27,6 +27,10 @@
 #
 # VERSION HISTORY
 # ---------------
+# v0.8.3- Lubomir Bulej <pallas@kadan.cz>
+#	  - use LC_COLLATE="C" when sorting class files
+#	- Paulo Sedrez
+#	  - fix time2abs to allow hours with leading zero in TIME rules
 # v0.8.2- Lubomir Bulej <pallas@kadan.cz>
 #	  - thanks to Hasso Tepper for reporting the following problems
 #	  - allow dots in interface names for use with VLAN interfaces
@@ -451,7 +455,7 @@ if [ -z "$HTB_BASIC" ]; then
 	htb_class_list () {
 		for dev in `htb_device_list`; do
 			find $HTB_PATH -type f -name "$dev-*" \
-			-maxdepth 1 -printf "%f\n"| sort
+			-maxdepth 1 -printf "%f\n"| LC_COLLATE="C" sort
 		done
 	} # htb_class_list
 
@@ -512,7 +516,7 @@ else ### Less feature-hungry versions of above functions
 			find $HTB_PATH -type f -name "$dev-*" \
 			| grep "^$HTB_PATH/$dev-[^/]\+" \
 			| sed "s/$PFX\///" \
-			| sort
+			| LC_COLLATE="C" sort
 		done
 	} # htb_class_list
 
@@ -578,7 +582,8 @@ htb_fail_off () {
 ### Convert time to absolute value
 htb_time2abs () {
 	_min=${1##*:}; _min=${_min##0}
-	echo $[${1%%:*}*60 + _min]
+	_hrs=${1%%:*}; _hrs=${_hrs##0}
+	echo $[${_hrs}*60 + _min]
 } # htb_time2abs
 
 
