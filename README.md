@@ -1,7 +1,15 @@
 HTB.init
 ========
 
-A script to set up HTB traffic control on Linux.
+A (historical) script to set up HTB traffic control on Linux.
+
+I have no idea how many people still use the script. The traffic
+control in Linux has evolved since days of Linux 2.6, when this
+script was popular.
+
+I also have no idea how well it plays together with the new default
+queuing disciplines (CODEL and FQCODEL) designed to remove buffer
+bloat from the Internet.
 
 
 INTRODUCTION
